@@ -384,7 +384,20 @@ def coproduct.split.r {p : Poly.{u, u}} : p ⟶ p + p :=
   , onDir := λ _ppos pdir ↦ pdir
   }
 
-def coproduct.leftUnitor.hom (p : Poly) : (𝟬 + p) ⟶ p where
+def coproduct.rightUnitor.hom (p : Poly) : p + 𝟬 ⟶ p where
+  onPos := λ pos ↦
+  match pos with
+  | .inl ppos => ppos
+  onDir := λ pos dir ↦
+  match pos with
+  | .inl _ppos => dir
+
+def coproduct.rightUnitor.inv (p : Poly) : p ⟶ p + 𝟬 where
+  onPos := λ ppos ↦ .inl ppos
+  onDir := λ _ppos pdir ↦ pdir
+
+
+def coproduct.leftUnitor.hom (p : Poly) : 𝟬 + p ⟶ p where
   onPos := λ pos ↦
   match pos with
   | .inr ppos => ppos
@@ -392,16 +405,66 @@ def coproduct.leftUnitor.hom (p : Poly) : (𝟬 + p) ⟶ p where
   match pos with
   | .inr _ppos => dir
 
-def coproduct.leftUnitor.inv (p : Poly) : p ⟶ (𝟬 + p) where
+def coproduct.leftUnitor.inv (p : Poly) : p ⟶ 𝟬 + p where
   onPos := λ ppos ↦ .inr ppos
   onDir := λ _ppos pdir ↦ pdir
+
+def coproduct.associator.hom (p q r : Poly) : (p + q) + r ⟶ p + (q + r) where
+  onPos := λ pos ↦
+  match pos with
+  | .inl (.inl p) => .inl p
+  | .inl (.inr q) => .inr (.inl q)
+  | .inr r => .inr (.inr r)
+  onDir := λ pos pdir ↦ match pos with
+  | .inl (.inl _) => pdir
+  | .inl (.inr _) => pdir
+  | .inr _ => pdir
+
+def coproduct.associator.inv (p q r : Poly) : p + (q + r) ⟶ (p + q) + r where
+  onPos := λ pos ↦
+  match pos with
+  | .inl p => .inl (.inl p)
+  | .inr (.inl q) => .inl (.inr q)
+  | .inr (.inr r) => .inr r
+  onDir := λ pos pdir ↦
+  match pos with
+  | .inl _ => pdir
+  | .inr (.inl _) => pdir
+  | .inr (.inr _) => pdir
+
+def coproduct.associator.inv_hom_id : composemap (associator.inv p q r) (associator.hom p q r) = polyid (p + q + r) :=
+  by
+    simp only [inv, hom, composemap, Function.comp_apply, polyid, id_eq]
+    ext d
+    . cases d
+      . rfl
+      . rename_i v
+        cases v
+        . rfl
+        . rfl
+    . congr!
+      . funext p
+        cases p
+        . rfl
+        . simp
+          rename_i v
+          cases v
+          . rfl
+          . rfl
+      . split
+        . _
+        . _
+        . _
+      . _
+
+def coproduct.associator.hom_inv_id : composemap (associator.hom p q r) (associator.inv p q r) = polyid ((p + q) + r) :=
+  by
+    _
 
 
 def coproduct.leftUnitor.inv_hom_id : composemap (leftUnitor.inv p) (leftUnitor.hom p) = polyid p :=
   by
-  unfold composemap
-  unfold polyid
-  simp
+  simp [composemap, polyid]
   exact (And.intro rfl rfl)
 
 def coproduct.leftUnitor.hom_inv_id :
@@ -418,22 +481,52 @@ def coproduct.leftUnitor.hom_inv_id :
     · split
       assumption
 
+def coproduct.rightUnitor.inv_hom_id : composemap (rightUnitor.inv p) (rightUnitor.hom p) = polyid p :=
+  by
+  simp [composemap, polyid]
+  exact (And.intro rfl rfl)
 
-def coproduct.leftUnitor (p : Poly) : (𝟬 + p) ≅ p where
-  hom := coproduct.leftUnitor.hom p
-  inv := coproduct.leftUnitor.inv p
-  hom_inv_id := coproduct.leftUnitor.hom_inv_id
-  inv_hom_id := coproduct.leftUnitor.inv_hom_id
+def coproduct.rightUnitor.hom_inv_id : composemap (rightUnitor.hom p) (rightUnitor.inv p) = polyid (p + 𝟬) :=
+  by
+  ext d
+  . cases d
+    . rfl
+    . contradiction
+  . simp [composemap, polyid, inv, hom, Function.comp_apply, id_eq]
+    congr!
+    . split
+      assumption
+    . split
+      assumption
 
--- TODO:
--- instance Poly.coproduct.monoidalStruct : MonoidalCategoryStruct Poly where
---   tensorObj    := coproduct
---   whiskerLeft  := coproduct.whiskerLeft
---   whiskerRight := coproduct.whiskerRight
---   tensorUnit   := 𝟬
---   leftUnitor   := _
---   rightUnitor  := _
---   associator   := _
+
+def coproduct.leftUnitor (p : Poly) : (𝟬 + p) ≅ p :=
+  { hom := coproduct.leftUnitor.hom p
+  , inv := coproduct.leftUnitor.inv p
+  , hom_inv_id := coproduct.leftUnitor.hom_inv_id
+  , inv_hom_id := coproduct.leftUnitor.inv_hom_id }
+
+def coproduct.rightUnitor (p : Poly) : (p + 𝟬) ≅ p :=
+  { hom := coproduct.rightUnitor.hom p
+  , inv := coproduct.rightUnitor.inv p
+  , hom_inv_id := coproduct.rightUnitor.hom_inv_id
+  , inv_hom_id := coproduct.rightUnitor.inv_hom_id
+  }
+
+def coproduct.associator (p q r : Poly) : (p + q) + r ≅ p + q + r :=
+  { hom := coproduct.associator.hom p q r
+  , inv := coproduct.associator.inv p q r
+  , hom_inv_id := coproduct.associator.hom_inv_id
+  , inv_hom_id := coproduct.associator.inv_hom_id }
+
+instance Poly.coproduct.monoidalStruct : MonoidalCategoryStruct Poly where
+  tensorObj    := coproduct
+  whiskerLeft  := coproduct.whiskerLeft
+  whiskerRight := coproduct.whiskerRight
+  tensorUnit   := 𝟬
+  leftUnitor   := coproduct.leftUnitor
+  rightUnitor  := coproduct.rightUnitor
+  associator   := _
 
 /-!
 ## Cartesian product
@@ -523,6 +616,97 @@ def product.leftUnitor (p : Poly) : (𝟭 × p) ≅ p :=
       simp
       rfl
   }
+
+def product.rightUnitor.hom (p : Poly) : (p × 𝟭) ⟶ p where
+  onPos := λ (ppos , ()) ↦ ppos
+  onDir := λ (_ , ()) pdir ↦ .inl pdir
+
+def product.rightUnitor.inv (p : Poly) : p ⟶ (p × 𝟭) where
+  onPos := λ ppos ↦ (ppos , .unit)
+  onDir := λ _ pdir ↦
+  match pdir with
+  | .inl pfib => pfib
+
+def product.rightUnitor.hom_inv_id : composemap (product.rightUnitor.hom p) (product.rightUnitor.inv p) = 𝟙 (p × 𝟭) :=
+  by
+    unfold composemap
+    ext
+    . rfl
+    . simp
+      funext _ dir
+      cases dir
+      . rfl
+      . contradiction
+
+def product.rightUnitor (p : Poly) : (p × 𝟭) ≅ p :=
+  { hom := product.rightUnitor.hom p
+  , inv := product.rightUnitor.inv p
+  , hom_inv_id := product.rightUnitor.hom_inv_id
+  , inv_hom_id := by
+      simp [product.rightUnitor.hom]
+      rfl
+  }
+
+def product.associator.hom (p q r : Poly) : (p × q) × r ⟶ p × (q × r) where
+  onPos := λ ((ppos , qpos) , rpos) => (ppos , (qpos , rpos))
+  onDir := λ _ dir =>
+    match dir with
+      | .inl pdir => .inl (.inl pdir)
+      | .inr (.inl qdir) => .inl (.inr qdir)
+      | .inr (.inr rdir) => .inr rdir
+
+def product.associator.inv (p q r : Poly) : p × (q × r) ⟶ (p × q) × r where
+  onPos := λ (ppos , (qpos , rpos)) => ((ppos , qpos) , rpos)
+  onDir := λ _ dir =>
+    match dir with
+      | .inl (.inl pdir) => .inl pdir
+      | .inl (.inr qdir) => .inr (.inl qdir)
+      | .inr rdir => .inr (.inr rdir)
+
+def product.associator.hom_inv_id : composemap (hom p q r) (inv p q r) = polyid ((p × q) × r) :=
+  by
+    ext
+    . rfl
+    . simp [composemap, polyid]
+      funext _ dir
+      cases dir
+      . rename_i _ x
+        cases x
+        . rfl
+        . rfl
+      . rfl
+
+def product.associator.inv_hom_id : composemap (inv p q r) (hom p q r) = 𝟙 (p × (q × r)) :=
+  by
+    ext
+    . rfl
+    . simp
+      funext _ dir
+      cases dir
+      . rfl
+      . rename_i _ x
+        cases x
+        . rfl
+        . rfl
+
+def product.associator (p q r : Poly) : (p × q) × r ≅ p × (q × r) :=
+  { hom := product.associator.hom p q r
+  , inv := product.associator.inv p q r
+  , hom_inv_id := product.associator.hom_inv_id
+  , inv_hom_id := product.associator.inv_hom_id
+  }
+
+instance Poly.product.monoidalStruct : MonoidalCategoryStruct Poly where
+  tensorObj    := product
+  whiskerLeft  := product.whiskerLeft
+  whiskerRight := product.whiskerRight
+  tensorUnit   := 𝟭
+  leftUnitor   := product.leftUnitor
+  rightUnitor  := product.rightUnitor
+  associator   := product.associator
+
+instance Poly.product.monoidal : MonoidalCategory Poly where
+
 
 /-!
 ## Parallel product
@@ -698,10 +882,8 @@ def homTensor.closed.adjunction.homEquiv (p X Y : Poly) :
     simp
     rfl
    right_inv := by
-    intro ψ
-    unfold homTensor.closed.adjunction.homEquiv.toFun
-    unfold homTensor.closed.adjunction.homEquiv.invFun
-    simp
+    intro φ
+    simp [homTensor.closed.adjunction.homEquiv.toFun, homTensor.closed.adjunction.homEquiv.invFun]
     rfl
 
 def homTensor.closed.adjunction (p : Poly) : MonoidalCategory.tensorLeft p ⊣ homTensor.closed.right p :=
@@ -772,6 +954,69 @@ def these {p q r : Poly} (f : p ⟶ r) (g : q ⟶ r) (h : (p × q) ⟶ r) : ((p 
     | .inr (.inl (ppos , qpos)) => h.onDir (ppos , qpos) fib
     | .inr (.inr qpos) => g.onDir qpos fib
   }
+
+def bofSides (f : p ⟶ r) (g : q ⟶ w) : p ◁ q ⟶ r ◁ w :=
+  { onPos := λ ⟨ ppos, atqpos ⟩ ↦ ⟨ f.onPos ppos, λ atR ↦ g.onPos (atqpos (f.onDir ppos atR)) ⟩
+  , onDir := λ ⟨ ppos, atqpos ⟩ ⟨ dr , dw ⟩ ↦ ⟨ f.onDir ppos dr , g.onDir (atqpos (f.onDir ppos dr)) dw ⟩ }
+
+def unitizeLeft (p : Poly) : p ⟶ y ◁ p :=
+  { onPos := λ ppos ↦ ⟨() , λ _ ↦ ppos ⟩
+  , onDir := λ _ ↦ Sigma.snd
+  }
+
+def unitizeRight (p : Poly) : p ⟶ p ◁ y :=
+  { onPos := λ ppos => ⟨ppos , λ _ ↦ () ⟩
+  , onDir := λ _ => Sigma.fst
+  }
+
+structure Comonoid (carrier : Poly) : Type 1 where
+  counit  : carrier ⟶ y
+  comult  : carrier ⟶ carrier ◁ carrier
+  leftCounit : unitizeLeft carrier = composemap comult (bofSides counit idpoly)
+  rightCounit : unitizeRight carrier = comult ≫ bofSides idpoly counit
+  -- 𝔰
+  coassoc : comult ≫ bofSides idpoly comult = comult ≫ bofSides comult idpoly
+
+def well : Comonoid (Bool y^ Bool + y) :=
+  { counit := { onPos := λ pos => .unit
+              , onDir := λ pos dir => match pos with
+                | .inl x => x
+                | .inr _ => .unit
+              }
+  , comult := { onPos := λ pos => match pos with
+                | .inl x => ⟨ .inl x ,  λ a ↦ .inl x ⟩
+                | .inr () => ⟨ .inr () , λ a ↦ .inr () ⟩
+              , onDir := λ pos dir => match pos, dir with
+                | .inl x, ⟨ a , _ ⟩ => a
+                | .inr (), ⟨ _ , () ⟩ => ()}
+  , leftCounit := by
+      intro x
+      simp [unitizeLeft, bofSides, composemap, Function.comp_apply]
+      _
+  , rightCounit := sorry
+  , coassoc := sorry
+  }
+
+def comonoids_are_categories.hom  (c : Comonoid carrier) : Category carrier.pos :=
+  { Hom := λ p1 p2 ↦ { f : carrier.dir p1 // cod f = p1 }
+  , id := λ p ↦ ⟨ c.counit.onDir p () , sorry ⟩
+  , comp := λ ⟨dira , dirasib⟩ ⟨dirb , dirbisc⟩ ↦ sorry
+  , id_comp := sorry
+  , comp_id := sorry
+  , assoc := sorry
+  }
+  where cod {x : carrier.pos} (f : carrier.dir x) : carrier.pos := let
+          a := ((c.comult.onPos x).snd )
+
+          sorry
+
+theorem comonoids_are_categories : Comonoid carrier ≅ Category carrier.pos := {
+    hom := comonoids_are_categories.hom
+  , inv := sorry
+  , hom_inv_id := sorry
+  , inv_hom_id := sorry
+}
+
 
 
 end Poly
