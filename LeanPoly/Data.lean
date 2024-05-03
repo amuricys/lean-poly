@@ -17,7 +17,7 @@ Defines the category of polynomial functors, as a type class parametrised by the
 
 For polynomial functos, we use the same notation as that for categories.
 * `𝟙 p` for the identity lens from `p` to itself (type as `\b1`)
-* `p ⟶ q` for the space of lenses from `p` to `q` (type as `\-->`)
+* `p ⟶ q` for the space of lenses from `p` to `q` (type as `\-→`)
 * `p ≫ q` for composition in the diagrammatic order (type as `\gg`)
 
 We introduce some new notations in the `Poly` scope
@@ -52,23 +52,20 @@ namespace CategoryTheory
 namespace Poly
 
 
-
-
-
 /-!
-## Category of polynommial functors
+## Category of polynomial functors
 -/
 
 /-- Poly as a type where the objects are pairs (pos, dir). -/
 structure Poly where
   pos : Type u
-  dir : pos -> Type v
+  dir : pos → Type v
 
 /-- The type of lenses/maps from one polynomial functor to another. -/
 @[ext]
 structure polymap (p q : Poly.{u, v}) : Type max u v where
-  onPos : p.pos -> q.pos
-  onDir : (x : p.pos) -> q.dir (onPos x) -> p.dir x
+  onPos : p.pos → q.pos
+  onDir : (x : p.pos) → q.dir (onPos x) → p.dir x
 
 /-- The identity lens/map from a polynomial functor to itself. -/
 def polyid (p : Poly) : polymap p p where
@@ -96,11 +93,11 @@ instance Poly.category : Category Poly where
 /-- Applying a polynomial functor to get a type. -/
 def applyFun (p : Poly.{u, v}) (T : Type w) :
     Type max u v w :=
-  Σ (x : p.pos), (p.dir x) -> T
+  Σ (x : p.pos), (p.dir x) → T
 
 /-- Applying a lens/map to get a function. -/
 def applyMap {p q : Poly.{u, v}} (f : p ⟶ q) (T : Type) :
-    (applyFun p T) -> (applyFun q T) :=
+    (applyFun p T) → (applyFun q T) :=
   λ x ↦ Sigma.mk (f.onPos x.fst) (x.snd ∘ (f.onDir x.fst))
 
 
@@ -108,7 +105,7 @@ def applyMap {p q : Poly.{u, v}} (f : p ⟶ q) (T : Type) :
 
 
 /-!
-## Special polynommial functors
+## Special polynomial functors
 -/
 
 /-- A monomial functor. -/
@@ -163,24 +160,22 @@ scoped notation "!𝟭" => Function.const _ PUnit.unit  -- type as `!\sb1`
 
 
 
-
-
 /-!
 ## Special lenses/maps
 -/
 
 /-- A lens/map between constant polynomial functors. -/
-def constantMap {T T' : Type u} (f : T -> T') : T y^0 ⟶ T' y^0 where
+def constantMap {T T' : Type u} (f : T → T') : T y^0 ⟶ T' y^0 where
   onPos := f
   onDir := (λ _ ↦ !𝟬)
 
 /-- A lens/map between linear polynomial functors. -/
-def linearMap {T T' : Type u} (f : T -> T') : T y^1 ⟶ T' y^1 where
+def linearMap {T T' : Type u} (f : T → T') : T y^1 ⟶ T' y^1 where
   onPos := f
   onDir := (λ _ ↦ !𝟭)
 
 /-- A lens/map between representable functors. -/
-def representableMap {T T' : Type u} (f : T -> T') : y^T' ⟶ y^T where
+def representableMap {T T' : Type u} (f : T → T') : y^T' ⟶ y^T where
   onPos := !𝟭
   onDir := (λ _ ↦ f)
 
@@ -196,7 +191,7 @@ def bang1poly {P : Poly.{u, v}} : P ⟶ 𝟭 where
 
 /-- A second representation for the type of lenses/maps. -/
 def polymap2 (p q : Poly.{u, v}) : Type max u v :=
-  (px : p.pos) -> Σ (qx : q.pos), q.dir qx -> p.dir px
+  (px : p.pos) → Σ (qx : q.pos), q.dir qx → p.dir px
 
 /-- Casting from the default representation for the type
     of lenses/maps to the second representation. -/
@@ -208,8 +203,6 @@ def cast12 {p q : Poly.{u, v}} (f : p ⟶ q) : polymap2 p q :=
 def cast21 {p q : Poly.{u, v}} (f : polymap2 p q) : p ⟶ q where
   onPos := (λ px ↦ (f px).fst)
   onDir := (λ px ↦ (f px).snd)
-
-
 
 
 
@@ -247,10 +240,6 @@ def subst.leftUnitor.inv (p : Poly) : p ⟶ (y ◁ p) where
   onPos := λ x ↦ Sigma.mk PUnit.unit (λ _ ↦ x)
   onDir := λ _ d ↦ d.snd
 
-def subst.leftUnitor (p : Poly) : (y ◁ p) ≅ p where
-  hom := subst.leftUnitor.hom p
-  inv := subst.leftUnitor.inv p
-
 def subst.rightUnitor.hom (p : Poly) : (p ◁ y) ⟶ p where
   onPos := λ x ↦ x.fst
   onDir := λ _ d ↦ Sigma.mk d PUnit.unit
@@ -259,9 +248,6 @@ def subst.rightUnitor.inv (p : Poly) : p ⟶ (p ◁ y) where
   onPos := λ x ↦ Sigma.mk x (λ _ ↦ PUnit.unit)
   onDir := λ _ d ↦ d.fst
 
-def subst.rightUnitor (p : Poly) : (p ◁ y) ≅ p where
-  hom := subst.rightUnitor.hom p
-  inv := subst.rightUnitor.inv p
 
 def subst.associator.hom (p q r : Poly) :
     (p ◁ q) ◁ r ⟶ p ◁ (q ◁ r) := by
@@ -323,27 +309,6 @@ def subst.associator.inv (p q r : Poly) :
       case snd =>
         exact pq_rd2
 
-def subst.associator (p q r : Poly) : (p ◁ q) ◁ r ≅ p ◁ (q ◁ r) where
-  hom := subst.associator.hom p q r
-  inv := subst.associator.inv p q r
-
-instance Poly.subst.monoidalStruct : MonoidalCategoryStruct Poly where
-  tensorObj    := subst
-  whiskerLeft  := subst.whiskerLeft
-  whiskerRight := subst.whiskerRight
-  tensorUnit   := y
-  leftUnitor   := subst.leftUnitor
-  rightUnitor  := subst.rightUnitor
-  associator   := subst.associator
-
-/-- All hyptheses proven automatically so none provided. -/
-instance Poly.subst.monoidal : MonoidalCategory Poly where
-
--- structure Comonad where
---   carrier : Poly
---   counit  : carrier ⟶ y
---   comult  : carrier ⟶ (carrier ◁ carrier)
-
 /-!
 ## Co-Product
 -/
@@ -395,45 +360,6 @@ def coproduct.leftUnitor.hom (p : Poly) : (𝟬 + p) ⟶ p where
 def coproduct.leftUnitor.inv (p : Poly) : p ⟶ (𝟬 + p) where
   onPos := λ ppos ↦ .inr ppos
   onDir := λ _ppos pdir ↦ pdir
-
-
-def coproduct.leftUnitor.inv_hom_id : composemap (leftUnitor.inv p) (leftUnitor.hom p) = polyid p :=
-  by
-  unfold composemap
-  unfold polyid
-  simp
-  exact (And.intro rfl rfl)
-
-def coproduct.leftUnitor.hom_inv_id :
-    composemap (leftUnitor.hom p) (leftUnitor.inv p) = polyid (𝟬 + p) := by
-  ext d
-  . cases d
-    . contradiction
-    . rfl
-  . cases p
-    simp only [hom, inv, composemap, polyid, Function.comp_apply, id_eq]
-    congr!
-    · split
-      assumption
-    · split
-      assumption
-
-
-def coproduct.leftUnitor (p : Poly) : (𝟬 + p) ≅ p where
-  hom := coproduct.leftUnitor.hom p
-  inv := coproduct.leftUnitor.inv p
-  hom_inv_id := coproduct.leftUnitor.hom_inv_id
-  inv_hom_id := coproduct.leftUnitor.inv_hom_id
-
--- TODO:
--- instance Poly.coproduct.monoidalStruct : MonoidalCategoryStruct Poly where
---   tensorObj    := coproduct
---   whiskerLeft  := coproduct.whiskerLeft
---   whiskerRight := coproduct.whiskerRight
---   tensorUnit   := 𝟬
---   leftUnitor   := _
---   rightUnitor  := _
---   associator   := _
 
 /-!
 ## Cartesian product
@@ -503,27 +429,6 @@ def product.leftUnitor.inv (p : Poly) : p ⟶ (𝟭 × p) where
   match dir with
   | .inr pfib => pfib
 
-def product.leftUnitor.hom_inv_id : composemap (leftUnitor.hom p) (leftUnitor.inv p) = 𝟙 (𝟭 × p)
-  := by
-      unfold composemap
-      ext
-      . rfl
-      . simp
-        funext _ dir
-        cases dir
-        . contradiction
-        . rfl
-
-def product.leftUnitor (p : Poly) : (𝟭 × p) ≅ p :=
-  { hom := product.leftUnitor.hom p
-  , inv := product.leftUnitor.inv p
-  , hom_inv_id := product.leftUnitor.hom_inv_id -- extracted so that we may unfold composemap
-  , inv_hom_id := by
-      unfold product.leftUnitor.hom
-      simp
-      rfl
-  }
-
 /-!
 ## Parallel product
 -/
@@ -539,17 +444,20 @@ def tensor.map (p q r z : Poly.{u, u}) (f : p ⟶ q) (g : r ⟶ z) : p ⊗ r ⟶
     , onDir := λ (ppos , rpos) (qdir , zdir) => (f.onDir ppos qdir , g.onDir rpos zdir)
     }
 
+scoped notation:99 "‹" A:97 "⊗" B:97 "›"  => tensor.map _ _ _ _ A B
+
+
 def tensor.whiskerLeft (p : Poly) {q q' : Poly} (f : q ⟶ q') : p ⊗ q ⟶ p ⊗ q' :=
-  (tensor.map p p q q' ) (polyid p) f
+  ‹ polyid p ⊗ f ›
 
 def tensor.whiskerRight {p p' : Poly} (f : p ⟶ p') (q : Poly) : p ⊗ q ⟶ p' ⊗ q :=
-  (tensor.map p p' q q) f (polyid q)
+  ‹ f ⊗ polyid q ›
 
 def tensor.first {p q r : Poly.{u, u}} (f : p ⟶ r) : p ⊗ q ⟶ r ⊗ q :=
-  (tensor.map p r q q) f (polyid q)
+  ‹ f ⊗ polyid q ›
 
 def tensor.second {p q r : Poly.{u, u}} (g : q ⟶ r) : p ⊗ q ⟶ p ⊗ r :=
-  (tensor.map p p q r) (polyid p) g
+  ‹ polyid p ⊗ g ›
 
 def tensor.swap {p q : Poly} : p ⊗ q ⟶ q ⊗ p :=
   { onPos := λ (ppos , qpos) => (qpos , ppos)
@@ -596,34 +504,6 @@ def tensor.unit.r.bwd {P : Poly} : P ⟶ P ⊗ y :=
   , onDir := λ _ (pdir , _) => pdir
   }
 
-def tensor.leftUnitor (p : Poly) : (y ⊗ p) ≅ p :=
-  { hom := tensor.unit.l.fwd
-  , inv := tensor.unit.l.bwd
-  }
-
-def tensor.rightUnitor (p : Poly) : (p ⊗ y) ≅ p :=
-  { hom := tensor.unit.r.fwd
-  , inv := tensor.unit.r.bwd
-  }
-
-def tensor.associator (p q r : Poly) : (p ⊗ q) ⊗ r ≅ p ⊗ (q ⊗ r) :=
-  { hom := tensor.assoc.bwd
-  , inv := tensor.assoc.fwd
-  }
-
-instance Poly.tensor.monoidalStruct : MonoidalCategoryStruct Poly where
-  tensorObj    := tensor
-  whiskerLeft  := tensor.whiskerLeft
-  whiskerRight := tensor.whiskerRight
-  tensorUnit   := y
-  leftUnitor   := tensor.leftUnitor
-  rightUnitor  := tensor.rightUnitor
-  associator   := tensor.associator
-
-/-- All hypotheses proven automatically so none provided. -/
-instance Poly.tensor.monoidal : MonoidalCategory Poly where
-
-
 -- /-!
 -- ## ⊗-closure
 -- -/
@@ -655,60 +535,6 @@ def homTensor.closed.right (r : Poly) : Poly ⥤ Poly where
 def homTensor.eval (p r : Poly) : ⟦ p, r ⟧ ⊗ p ⟶ r where
   onPos := λ (φ, pPos) ↦ φ.onPos pPos
   onDir := λ (φ, pPos) dirR ↦ (⟨pPos, dirR⟩, φ.onDir pPos dirR)
-
-def homTensor.closed.adjunction.homEquiv.toFun {p : Poly} (φ : (p ⊗ X ⟶ Y)) : (X ⟶ ⟦p, Y⟧ ) :=
-    let curriedOnPos (xPos : X.pos) : p ⟶ Y :=
-        { onPos := λ pPos ↦ φ.onPos (pPos, xPos)
-        -- We have to bee explicit about φ.onPos here; if we pattern match on φ
-        -- to extract onPos, we get a type mismatch error.
-        , onDir := λ (pPos : p.pos) (yDir : Poly.dir Y (φ.onPos (pPos, xPos)))  ↦
-            let ⟨dirp, _⟩  := φ.onDir (pPos, xPos) yDir
-            dirp }
-    let curriedOnDir (xPos : X.pos) (homDir : (⟦p, Y⟧).dir (curriedOnPos xPos)) : X.dir xPos := match homDir with
-        | ⟨pPos, ydir⟩ =>
-            let ⟨_, dirx⟩  := φ.onDir (pPos, xPos) ydir
-            dirx
-      { onPos := curriedOnPos
-        onDir := curriedOnDir }
-
-def homTensor.closed.adjunction.homEquiv.invFun {p : Poly} (ψ : X ⟶ ⟦p, Y⟧ ) : (p ⊗ X ⟶ Y) :=
-  let uncurriedOnPos (pxPos : (p ⊗ X).pos) : Y.pos :=
-    let ⟨pPos, xPos⟩ := pxPos
-    let intermediate := ψ.onPos xPos
-    intermediate.onPos pPos
-  let uncurriedOnDir (pxPos : (p ⊗ X).pos) (pyDir : Y.dir (uncurriedOnPos pxPos)) : (p ⊗ X).dir pxPos :=
-    let ⟨pPos, xPos⟩ := pxPos
-    let intermediate := ψ.onPos xPos
-    ⟨intermediate.onDir pPos pyDir, ψ.onDir xPos ⟨pPos, pyDir⟩⟩
-  { onPos := uncurriedOnPos,
-    onDir := uncurriedOnDir }
-
-
-def homTensor.closed.adjunction.homEquiv (p X Y : Poly) :
-  (p ⊗ X ⟶ Y)  -- Hom(p ⊗ X, Y)  (same as X ⊗ p because ⊗ is symmetric)
-  ≃
-  (X ⟶ ⟦p, Y⟧ ) -- Hom (X, ⟦p, Y⟧)
-  where
-   toFun := homTensor.closed.adjunction.homEquiv.toFun
-   invFun := homTensor.closed.adjunction.homEquiv.invFun
-   left_inv := by
-    intro ψ
-    unfold homTensor.closed.adjunction.homEquiv.toFun
-    unfold homTensor.closed.adjunction.homEquiv.invFun
-    simp
-    rfl
-   right_inv := by
-    intro ψ
-    unfold homTensor.closed.adjunction.homEquiv.toFun
-    unfold homTensor.closed.adjunction.homEquiv.invFun
-    simp
-    rfl
-
-def homTensor.closed.adjunction (p : Poly) : MonoidalCategory.tensorLeft p ⊣ homTensor.closed.right p :=
-  Adjunction.mkOfHomEquiv {homEquiv := homTensor.closed.adjunction.homEquiv p}
-
-instance : Closed (p : Poly) where
-  isAdj := {right := homTensor.closed.right p, adj := homTensor.closed.adjunction p}
 
 /-!
 ## Or product

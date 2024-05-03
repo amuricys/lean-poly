@@ -1,1 +1,3 @@
-import «LeanPoly».Poly
+import «LeanPoly».Data
+import «LeanPoly».Properties
+import «LeanPoly».System

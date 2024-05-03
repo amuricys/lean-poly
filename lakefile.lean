@@ -6,7 +6,10 @@ package «lean-poly» {
 }
 
 require mathlib from git
-  "https://github.com/leanprover-community/mathlib4.git"
+  "https://github.com/leanprover-community/mathlib4" @ "lecopivo/fun_trans"
+
+require scilean from git
+  "https://github.com/lecopivo/SciLean.git"
 
 @[default_target]
 lean_lib «LeanPoly» {
