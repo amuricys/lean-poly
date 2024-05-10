@@ -201,6 +201,75 @@ def homTensor.closed.adjunction (p : Poly) : MonoidalCategory.tensorLeft p ⊣ h
 instance : Closed (p : Poly) where
   isAdj := {right := homTensor.closed.right p, adj := homTensor.closed.adjunction p}
 
+
+def bofSides (f : p ⟶ r) (g : q ⟶ w) : p ◁ q ⟶ r ◁ w :=
+  { onPos := λ ⟨ ppos, atqpos ⟩ ↦ ⟨ f.onPos ppos, λ atR ↦ g.onPos (atqpos (f.onDir ppos atR)) ⟩
+  , onDir := λ ⟨ ppos, atqpos ⟩ ⟨ dr , dw ⟩ ↦ ⟨ f.onDir ppos dr , g.onDir (atqpos (f.onDir ppos dr)) dw ⟩ }
+
+def unitizeLeft (p : Poly) : p ⟶ y ◁ p :=
+  { onPos := λ ppos ↦ ⟨() , λ _ ↦ ppos ⟩
+  , onDir := λ _ ↦ Sigma.snd
+  }
+
+def unitizeRight (p : Poly) : p ⟶ p ◁ y :=
+  { onPos := λ ppos => ⟨ppos , λ _ ↦ () ⟩
+  , onDir := λ _ => Sigma.fst
+  }
+
+structure Comonoid (carrier : Poly) : Type 1 where
+  counit  : carrier ⟶ y
+  comult  : carrier ⟶ carrier ◁ carrier
+  leftCounit : unitizeLeft carrier = composemap comult (bofSides counit (polyid carrier))
+  rightCounit : unitizeRight carrier = composemap comult (bofSides (polyid carrier) counit)
+  -- 𝔰
+  coassoc : HEq (comult ≫ bofSides (polyid carrier) comult) (comult ≫ bofSides comult (polyid carrier))
+
+
+def comonoids_are_categories.hom  (c : Comonoid carrier) : Category carrier.pos :=
+  let bookkeeping {anypos : carrier.pos} : (c.comult.onPos anypos).fst = anypos := sorry
+  let 
+
+  { Hom := λ p1 p2 ↦ { f : carrier.dir p1 // cod f = p2 }
+  , id := λ p ↦ ⟨ c.counit.onDir p () ,
+      by
+
+        reduce
+        have x := c.leftCounit
+        unfold unitizeLeft at x
+        unfold composemap at x
+        unfold bofSides at x
+        unfold polyid at x
+        simp [Function.comp_apply] at x
+        congr! at x
+
+
+        exact x ⟩
+  , comp := by
+      intros a b c
+      reduce
+      exact
+      λ ⟨dira , dirasib⟩ ⟨dirb , dirbisc⟩ ↦ by
+        reduce
+        exact ⟨ (by reduce ; whnf ; _ ) , _ ⟩
+
+        sorry
+  , id_comp := sorry
+  , comp_id := sorry
+  , assoc := sorry
+  }
+  where cod {x : carrier.pos} (f : carrier.dir x) : carrier.pos := let
+          a := ((c.comult.onPos x).snd )
+
+          sorry
+
+theorem comonoids_are_categories : Comonoid carrier ≅ Category carrier.pos := {
+    hom := comonoids_are_categories.hom
+  , inv := sorry
+  , hom_inv_id := sorry
+  , inv_hom_id := sorry
+}
+
+
 /-!
 ## Or product is monoidal structure
 -/
