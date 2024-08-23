@@ -229,15 +229,14 @@ def subst (p q : Poly.{u, u}) : Poly.{u, u} where
 /-- Notation for substitution product of polynomial functors. -/
 scoped infixr:80 "◁" => subst -- type as `\lhd`
 
-def subst.whiskerLeft (p q q': Poly) (f : q ⟶ q') :
-    (p ◁ q) ⟶ (p ◁ q') where
+def subst.whiskerLeft {p : Poly} (f : q ⟶ q') : (p ◁ q) ⟶ (p ◁ q') where
   onPos := λ x ↦ Sigma.mk x.fst (f.onPos ∘ x.snd)
   onDir := λ x d ↦ Sigma.mk d.fst (f.onDir (x.snd d.fst) d.snd)
 
-def subst.whiskerRight (f : p ⟶ p') (q : Poly) :
-    (p ◁ q) ⟶ (p' ◁ q) where
+def subst.whiskerRight (f : p ⟶ p') : (p ◁ q) ⟶ (p' ◁ q) where
   onPos := applyMap f q.pos
   onDir := λ x d ↦ Sigma.mk (f.onDir x.fst d.fst) d.snd
+
 
 def subst.leftUnitor.hom (p : Poly) : (y ◁ p) ⟶ p where
   onPos := λ x ↦ x.snd x.fst
@@ -329,8 +328,8 @@ def subst.associator (p q r : Poly) : (p ◁ q) ◁ r ≅ p ◁ (q ◁ r) where
 
 instance Poly.subst.monoidalStruct : MonoidalCategoryStruct Poly where
   tensorObj    := subst
-  whiskerLeft  := subst.whiskerLeft
-  whiskerRight := subst.whiskerRight
+  whiskerLeft  := λ p ↦ subst.whiskerLeft (p := p)
+  whiskerRight := λ f q ↦ subst.whiskerRight f (q := q)
   tensorUnit   := y
   leftUnitor   := subst.leftUnitor
   rightUnitor  := subst.rightUnitor
@@ -368,10 +367,10 @@ def coproduct.map (p q r z : Poly.{u, u}) (f : p ⟶ q) (g : r ⟶ z) : (p + r) 
         | .inr rpos => g.onDir rpos
     }
 
-def coproduct.whiskerLeft (p : Poly) {q q' : Poly} (f : q ⟶ q') : p + q ⟶ p + q' :=
+def coproduct.whiskerLeft {p q q' : Poly} (f : q ⟶ q') : p + q ⟶ p + q' :=
   (coproduct.map p p q q' ) (polyid p) f
 
-def coproduct.whiskerRight {p p' : Poly} (f : p ⟶ p') (q : Poly) : p + q ⟶ p' + q :=
+def coproduct.whiskerRight {p p' q : Poly} (f : p ⟶ p') : p + q ⟶ p' + q :=
   (coproduct.map p p' q q) f (polyid q)
 
 def coproduct.split.l {p : Poly.{u, u}} : p ⟶ p + p :=
@@ -453,10 +452,10 @@ def product.map (p q r z : Poly.{u, u}) (f : p ⟶ q) (g : r ⟶ z) : (p × r) �
         | .inr zdir => .inr (g.onDir rpos zdir)
     }
 
-def product.whiskerLeft (p : Poly) {q q' : Poly} (f : q ⟶ q') : p × q ⟶ p × q' :=
+def product.whiskerLeft {p q q' : Poly} (f : q ⟶ q') : p × q ⟶ p × q' :=
   (product.map p p q q' ) (polyid p) f
 
-def product.whiskerRight {p p' : Poly} (f : p ⟶ p') (q : Poly) : p × q ⟶ p' × q :=
+def product.whiskerRight {p p' : Poly} (f : p ⟶ p') : p × q ⟶ p' × q :=
   (product.map p p' q q) f (polyid q)
 
 def product.fst {p q : Poly} : (p × q) ⟶ p :=
@@ -772,6 +771,292 @@ def these {p q r : Poly} (f : p ⟶ r) (g : q ⟶ r) (h : (p × q) ⟶ r) : ((p 
     | .inr (.inl (ppos , qpos)) => h.onDir (ppos , qpos) fib
     | .inr (.inr qpos) => g.onDir qpos fib
   }
+
+
+-- Free monad
+def p_aux (n : ℕ) (p : Poly) : Poly := match n with
+  | 0 => y
+  | Nat.succ n  => y + p ◁ (p_aux n p)
+--| ω => colim (a' < a) p
+def l (n : ℕ) (p : Poly) : (p_aux n p) ⟶ (p_aux (1 + n) p) := match n with
+  | 0 => {onPos := λ p ↦ .inl p , onDir := λ _ _ ↦ ()} -- y ⟶ y + p
+  | Nat.succ n => coproduct.whiskerLeft (subst.whiskerLeft (l n p))   -- y + p ◁ (p_aux n p) ⟶ y + p ◁ (p_aux (1 + n) p)
+--| ω => forall a < ω, this is the "natural inclusion"
+
+-- Remark A.2. A polynomial  : Poly is κ-small if and only if all of its direction-sets have cardinality
+-- less than κ. It is called finitary if and only if it is ω-small.
+def smallness (p : Poly) : ℕ := 10 -- TODO: how to get cardinality of direction sets?
+
+def freeMonad (p : Poly) : Poly := p_aux (smallness p) p
+-- Ξ
+
+-- cofree comonad
+def q_aux (n : ℕ) (q : Poly) := match n with
+  | 0 => y
+  | Nat.succ n => y × (q ◁ q_aux n q)
+
+def pi (n : ℕ) (q : Poly) : (q_aux (1 + n) q) ⟶ (q_aux n q) := match n with
+  | 0 => { onPos := λ ⟨y, _⟩ ↦ y, onDir := λ _ _  ↦ Sum.inl () } -- y × p ⟶  y
+  | Nat.succ n => product.whiskerLeft (subst.whiskerLeft (pi n q))  -- y × q ◁ (q_aux (1 + n) q) ⟶ y × q ◁ (q_aux n q)
+
+partial def free (p : Poly) : Poly :=
+  y + p ◁ free p
+
+partial def cofree (p : Poly) : Poly :=
+  Poly.product y (p ◁ cofree p)
+
+-- def counit : Cofree f a ⟶ y where
+--   onPos := sorry
+--   onDir := sorry
+
+
+-- TODO: variants
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+structure dynamicalSystem where
+  interface : Poly
+  state : Type
+  behavior : state y^ state ⟶ interface
+
+notation A " ⊎ " B => Sum A B
+
+structure paymentRequest.createPayment where
+  amt : ℕ
+
+structure paymentState.createPayment where
+  amt : ℕ
+
+structure registerPaymentRejected where
+  reason : String
+
+structure paymentRegistered where
+  amt : ℕ
+
+structure registerPayment where
+  accountNumber : String
+  amount : ℕ
+
+structure paymentCreated where
+  amount : ℕ
+
+structure paymentRejected where
+  reason : String
+
+structure paymentNotCreated where
+  reason : String
+
+-- By^A -> B outputs, A inputs
+-- By^A + Cy^D -> if your outputs are B, then inputs are A, else if outputs C then inputs D
+-- Sy^S -> By^A + Cy^D
+
+inductive registerPaymentProc.input where
+  | registerPayment (msg : registerPayment)
+  | paymentCreated (msg : paymentCreated)
+  | paymentRejected (msg : paymentRejected)
+  | paymentNotCreated (msg : paymentNotCreated)
+
+
+inductive registerPaymentProc.output where
+  | regPayHappy (req : paymentRequest.createPayment) (st : paymentState.createPayment)
+  | regPayUnhappy (regRej : registerPaymentRejected)
+  | payCreate (reg : paymentRegistered)
+  | payRejected (rej : registerPaymentRejected)
+  | payNotCreated
+open registerPaymentProc.output
+
+def registerPaymentProc.interface : Poly where
+  pos := registerPaymentProc.output
+  dir _ := registerPaymentProc.input
+
+def registerPaymentProc : dynamicalSystem where
+  interface := registerPaymentProc.interface
+  state := registerPaymentProc.input -- just the current message
+  behavior := { onPos := k, onDir := y }
+    where k _curMsg := regPayHappy { amt := 10 } { amt := 10 }
+          y _curMsg input := input
+
+inductive paymentRequestProc.input where
+  | createPayment (payment : paymentRequest.createPayment)
+
+inductive paymentRequestProc.output where
+  | paymentCreated (msg : paymentCreated)
+
+inductive paymentStateProc.input where
+  | createPayment (payment : paymentState.createPayment)
+
+inductive paymentStateProc.output where
+  | paymentCreated (msg : paymentCreated)
+
+def paymentRequestProc.interface : Poly where
+  pos := paymentRequestProc.output
+  dir _ := paymentRequestProc.input
+
+def paymentStateProc.interface : Poly where
+  pos := paymentStateProc.output
+  dir _ := paymentStateProc.input
+
+-- inductive HList {α : Type v} (β : α → Type u) : List α → Type (max u v)
+--   | nil  : HList β []
+--   | cons : β i → HList β is → HList β (i::is)
+
+-- inductive threeThings where
+--   | one | two | three : threeThings
+
+-- infixr:67 " ::: " => HList.cons
+-- notation "[" "]" => HList.nil
+
+-- def typeFamily (α : threeThings) : Type := match α with
+--   | .one => String
+--   | .two => Bool
+--   | .three => Bool
+
+-- example : HList typeFamily (.one :: .two :: .one :: []) :=
+--   "a" ::: true ::: "b" ::: []
+
+
+
+
+
+
+
+
+
+def listType (k : List Type) : Type 1 := match k with
+  | .nil => PUnit
+  | .cons t r => PProd (t → Type) (listType r)
+
+
+structure ListPoly where
+  pos : List Type
+  dir : listType pos
+
+
+def consListPoly (α : Type) (β : α → Type) (p : ListPoly) : ListPoly :=
+  { pos := List.cons α p.pos, dir := ⟨ β , p.dir⟩ }
+
+
+def joining (p q : ListPoly) : ListPoly :=
+  match p with
+    | ⟨ List.nil, .unit ⟩ => {pos := q.pos, dir := q.dir }
+    | ⟨ List.cons ppos prest, ⟨ pdir, pdirrest ⟩ ⟩  =>
+        consListPoly ppos pdir $ joining {pos := prest, dir := pdirrest} {pos := q.pos, dir := q.dir}
+
+def typeOfPosMap (p q : List Type) : Type := match p, q with
+  | List.nil, List.nil => PUnit
+  | _, _ => sorry
+
+
+@[ext]
+structure listPolyMap (p q : ListPoly) : Type where
+  onPos : match p, q with
+    | _ , _ => sorry
+  onDir : sorry -- (x : p.pos) -> q.dir (onPos x) -> p.dir x
+
+
+
+
+inductive thisthatthese (α β : Type) where
+  | this : α → thisthatthese α β
+  | that : β → thisthatthese α β
+  | these : α → β → thisthatthese α β
+
+infixr:75 " ∨ " => thisthatthese
+
+
+inductive OrderedList : Type u where
+  | nil : OrderedList
+  | cons : String → OrderedList
+
+
+
+
+def someSimpleProc : dynamicalSystem where
+  interface := paymentRequestProc.interface ∨ paymentStateProc.interface
+  state := (paymentRequestProc.interface ∨ paymentStateProc.interface).pos
+  behavior :=
+  let readout s := s
+  let update s input := match s, input with
+  | (.inl a), b => by reduce at b; sorry
+  | a, b =>
+      by reduce; reduce at a; simp at b; sorry
+  {onPos := readout, onDir := update}
+
+
+
+
+
+
+def totalProc : dynamicalSystem where
+  interface := paymentRequestProc.interface ∨ paymentStateProc.interface ∨ registerPaymentProc.interface
+  state := paymentRequestProc.input ∨ paymentStateProc.input ∨ registerPaymentProc.input
+  behavior :=
+  let f x := by
+      reduce at x
+      reduce
+      exact match x with
+      | .this a => Sum.inl (paymentRequestProc.output.paymentCreated {amount := 1})
+      | .that (.this b) => sorry
+      | .that (.that b) => sorry
+      | .that (.these a b) => sorry
+      | .these a (.this b) => sorry
+      | .these a (.that b) => sorry
+      | .these a (.these b c) => sorry
+  /- WHAT I'D WANT
+  So the idea is that x is a list of variants: any position
+  could be the output of any of the polynomials. We could have
+  [inj "PaymentRequest" (paymentreq), inj "PaymentState" (paymentstate)]
+  or
+  [inj "PaymentState" (paymentstate), inj "PaymentRequest" (paymentreq)]
+  let f x := match x with
+      | ⟨1, [a]⟩ => [handle a]
+      | ⟨2, [a,b]⟩ => [handle a, handle b]
+      | ⟨3, [a,b,c]⟩ => [handle a, handle b, handle c]
+      | ⟨4, [a,b,c,d]⟩ => [handle a, handle b, handle c, handle d]
+      | ⟨5, [a,b,c,d,e]⟩ => [handle a, handle b, handle c, handle d, handle e]
+      | ⟨6, [a,b,c,d,e,f]⟩ => [handle a, handle b, handle c, handle d, handle e, handle f]
+  -/
+  let k state innerOutputs := by
+    reduce at state
+    reduce
+    exact match (f state) with
+    |  .inl a => by
+          reduce
+          reduce at a
+          sorry
+    |  .inr b => sorry
+  {
+      onPos := f
+    , onDir := k
+  }
+    -- where k _curMsg := sorry -- regPayHappy { amt := 10 } { amt := 10 }
+    --       y _curMsg input := sorry
 
 
 end Poly
