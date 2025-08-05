@@ -8,6 +8,7 @@ import LeanCopilot
 
 namespace CategoryTheory
 set_option pp.proofs true
+set_option pp.showLetValues true
 
 /-- A comonoid in Poly (with respect to the substitution product ◁ and unit y). -/
 structure Comonoid where
@@ -150,7 +151,7 @@ lemma coassoc_pos_statement {C : Comonoid}
                             {i : C.carrier.pos}
                             (f : C.carrier.dir i)
                             (g : C.carrier.dir (cod f)) :
-                            cod (comp f g) = cod g  := by
+                            cod (comp f g) = cod g := by
     have coassoc_onPos := congrArg (λ x => x.onPos) C.coassoc
     simp [composemap, subst.whiskerRight, subst.whiskerLeft, applyMap, subst.associator.hom, Function.comp, subst] at coassoc_onPos
 
@@ -574,6 +575,17 @@ lemma across_cods {C : Comonoid}
                   : cod f = cod_2 (dir_eq ▸ f) := by
                   rfl
 
+lemma cod_eq {α : Sort _}
+             {i i' : α}
+             {β : α → Sort _}
+             (f : β i)
+             (h : i = i')
+             (x : β i = β i')
+             (abstract_cod : {i : α} → (f : β i) → α)
+              : abstract_cod (i := i') (f := x ▸ f) = abstract_cod (i := i) (f := f) := by
+              cases h
+              rfl
+
 lemma dir_lemma {p q r : Poly}
                 {i j : (p ◁ q ◁ r).pos}
                 {i' : p.pos}
@@ -591,13 +603,120 @@ lemma dir_lemma {p q r : Poly}
                 cases y
                 rfl
 
-def back {C : Comonoid}
-         {i : C.carrier.pos}
-         (f : C.carrier.dir (posAtDir i)) : C.carrier.dir i :=  C.counit.onDir i ()
+@[simp] lemma fst_cast  {β β' : α → Sort _} (h : β = β') (x : Σ a, β a) :
+  (h ▸ x).fst = x.fst := by cases h; rfl
+
+
+@[simp] lemma Sigma.snd_cast {α : Sort _} {β β' : α → Sort _}
+    (h : β = β') (x : Σ a, β a) :
+  HEq (h ▸ x).snd x.snd := by
+  cases h; rfl
+
+lemma abstracted {α : Sort _} -- C.carrier.os
+                 {β : α → Sort _} -- C.carrier.dir
+                 {i i' i'' : α} -- i, posAtDir i, posAtDir (posAtDir i)
+                 {cod : {i : α} → (β i) → α} -- cod
+                 (fn : (i : α) → (i' : α) → (f : β i) → (fPos : β i') → (g : β (cod f)) → (β i)) -- λ i {f} fpos g ↦ C.comult.onDir i ⟨ fpos , g ⟩
+                 (h : i = i') -- bookeeping i
+                 (h' : i' = i'') -- bookeeping i
+                 (x : β i = β i') -- dir_eq
+                 (x' : β i' = β i'') -- dir_eq
+                 (f : β i) -- f
+                 (g : β (cod f)) -- g
+                 (more_info : cod f = cod (i := i') (x ▸ f)) -- what_
+           :
+           x ▸ fn i i' (f := f) (x ▸ f) g = fn i' i'' (f := (x ▸ f)) (x' ▸ x ▸ f) (more_info ▸ g)
+           := by
+           cases h
+           cases h'
+           cases x
+           rfl
+
+
+-- LMAOOOOO
+lemma abstracted2 {α : Sort _} -- C.carrier.os
+                  {β : α → Sort _} -- C.carrier.dir
+                  {i : α} -- i
+                  {posAt : α → α} -- posAtDir
+                  {cod : {i : α} → (β i) → α} -- cod
+                  (h : i = posAt i) -- bookeeping i
+                  (x : {i : α} → β i = β (posAt i)) -- dir_eq
+                  (f : β i) -- f
+                  (g : β (cod f)) -- g
+                  (fn : (i : α) → (f : β i) → (g : β (cod f)) → (β i)) -- λ i {f} fpos g ↦ C.comult.onDir i ⟨ fpos , g ⟩
+                  (more_info : (cod f) = (cod (i := posAt i) (x ▸ f))) -- what_g
+           :
+           x ▸ fn i (f := f) g = fn (posAt i) (f := (x ▸ f)) (more_info ▸ g)
+           := by
+           exact abstracted (α := α)
+                                (β := β)
+                                (i := i)
+                                (i' := posAt i)
+                                (i'' := posAt (posAt i))
+                                (cod := cod)
+                                (fn := λ i _ f _ g ↦ fn i f g)
+                                (h := h)
+                                (h' := h ▸ h)
+                                (x := x)
+                                (x' := x)
+                                (f := f)
+                                (g := g)
+                                (more_info := more_info)
+
+lemma casted_sigma_fst_eq_s {C : Comonoid} -- C.carrier.pos
+                            (p1 p2 : Sigma fun x => (C.carrier.dir x → (x : C.carrier.pos) × (C.carrier.dir x → C.carrier.pos))) -- ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩ and ⟨posAtDir (posAtDir i), λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩⟩
+                            (pos_eq : p1 = p2)
+                            (f : C.carrier.dir p1.fst) -- So the type of f is constructed *out of* a position
+                            {g : (C.carrier◁C.carrier).dir (p1.snd f)}
+                            (x : C.carrier.dir p1.fst = C.carrier.dir p2.fst) :
+                            let elem_of_the_type : (C.carrier◁C.carrier◁C.carrier).dir p1 := ⟨ f , g ⟩
+                            (pos_eq ▸ elem_of_the_type).fst = x ▸ f
+                            := by
+                            cases pos_eq
+                            rfl
+
+lemma casted_sigma_snd_eq_s {C : Comonoid} -- C.carrier.pos
+                            (p1 p2 : Sigma fun x => (C.carrier.dir x → (x : C.carrier.pos) × (C.carrier.dir x → C.carrier.pos))) -- ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩ and ⟨posAtDir (posAtDir i), λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩⟩
+                            (pos_eq : p1 = p2)
+                            (f : C.carrier.dir p1.fst) -- So the type of f is constructed *out of* a position
+                            {g : C.carrier.dir (p1.snd f).fst}
+                            {h : C.carrier.dir ((p1.snd f).snd g)}
+                            :
+                            let elem_of_the_type : (C.carrier◁C.carrier◁C.carrier).dir p1 := ⟨ f , ⟨ g , h ⟩  ⟩
+                            HEq (pos_eq ▸ elem_of_the_type).snd.fst g
+                            := by
+                            cases pos_eq
+                            rfl
+
+lemma casted_sigma_3rd_eq_s {C : Comonoid} -- C.carrier.pos
+                            (p1 p2 : Sigma fun x => (C.carrier.dir x → (x : C.carrier.pos) × (C.carrier.dir x → C.carrier.pos))) -- ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩ and ⟨posAtDir (posAtDir i), λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩⟩
+                            (pos_eq : p1 = p2)
+                            (f : C.carrier.dir p1.fst) -- So the type of f is constructed *out of* a position
+                            {g : C.carrier.dir (p1.snd f).fst}
+                            {h : C.carrier.dir ((p1.snd f).snd g)}
+                            {capstmt : α}
+                            (more : HEq capstmt h )
+                            :
+                            let elem_of_the_type : (C.carrier◁C.carrier◁C.carrier).dir p1 := ⟨ f , ⟨ g , h ⟩  ⟩
+                            HEq (pos_eq ▸ elem_of_the_type).snd.snd capstmt
+                            := by
+                            cases pos_eq
+                            cases more
+                            rfl
+
+lemma cast_heq {α : Type}
+               {β : α → Type}
+               {a b : α}
+               (h : a = b)
+               (A : β a)
+               : HEq (h ▸ A) A   := by
+  cases h
+  rfl
+
 
 
 def coassoc_dir_statement {C : Comonoid}
-                          {i j k l : C.carrier.pos}
+                          {i : C.carrier.pos}
                           (f : C.carrier.dir i)
                           (g : C.carrier.dir (cod f))
                           (h : C.carrier.dir (cod g))
@@ -607,31 +726,35 @@ def coassoc_dir_statement {C : Comonoid}
                           comp f (comp g h) :=
   by
 
-    have sacred_pos_left : (C.carrier◁C.carrier◁C.carrier).pos := ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩
-    have sacred_pos_right : (C.carrier◁C.carrier◁C.carrier).pos := ⟨ posAtDir (posAtDir i) , λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩ ⟩
+    have sacred_pos_left : (C.carrier◁C.carrier◁C.carrier).pos
+      := ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩
+    have sacred_pos_right : (C.carrier◁C.carrier◁C.carrier).pos
+      := ⟨posAtDir (posAtDir i), λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩⟩
+    let reduced_pos_type := Sigma (fun x => (C.carrier.dir x → (x : C.carrier.pos) × (C.carrier.dir x → C.carrier.pos)))
     have pos_eq :
-        (⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩ : (C.carrier◁C.carrier◁C.carrier).pos)  =
-        (⟨posAtDir (posAtDir i) , λ pd ↦ ⟨ cod_2 pd , λ qd ↦ cod_2 (comp_2 pd qd) ⟩ ⟩ : (C.carrier◁C.carrier◁C.carrier).pos)
+        (⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩ : reduced_pos_type)  =
+        (⟨posAtDir (posAtDir i) , λ pd ↦ ⟨ cod_2 pd , λ qd ↦ cod_2 (comp_2 pd qd) ⟩ ⟩ : reduced_pos_type)
         := on_pos_eq (i := i) C.coassoc
 
     have coassoc_onDir := on_dir_eq (i := i) C.coassoc pos_eq
-    have coassoc_onDir_2 := on_dir_eq_no_cast (i := i) C.coassoc
-
-    -- simp [composemap, subst.whiskerLeft, subst.whiskerRight, subst.associator.hom] at coassoc_onDir
-    -- simp [composemap, subst.whiskerLeft, subst.whiskerRight, subst.associator.hom, applyMap, Function.comp_apply, cast] at coassoc_onDir_2
-
 
     let f' : C.carrier.dir (posAtDir i) := dir_eq ▸ f
     let g' : C.carrier.dir (posAtDir (cod f)) := dir_eq ▸ g
 
+    let composed :
+      (C.carrier◁C.carrier◁C.carrier).dir ⟨posAtDir (posAtDir i), λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩⟩
+      := pos_eq ▸ (⟨f', ⟨g', h⟩⟩ )
+    let composed_snd := composed.snd
+    let composed_fst := composed.fst
 
-    let composed
-      : let pos : (C.carrier◁C.carrier◁C.carrier).pos := ⟨ posAtDir (posAtDir i) , λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩ ⟩
-        (C.carrier◁C.carrier◁C.carrier).dir pos
-      := pos_eq ▸ { fst := f', snd := { fst := g', snd := h } : (C.carrier◁C.carrier◁C.carrier).dir ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩ }
+    let wm_eq_wm' : pos_eq.symm ▸ composed = ⟨f', ⟨g', h⟩⟩ :=
+      cast_id'''' (α := (C.carrier◁C.carrier◁C.carrier).pos) (β := (C.carrier◁C.carrier◁C.carrier).dir) pos_eq
+
+
     let some_kind_of_f : C.carrier.dir (posAtDir (posAtDir i)) := composed.fst
     let some_kind_of_g : C.carrier.dir (cod_2 some_kind_of_f) := composed.snd.fst
     let some_kind_of_h : C.carrier.dir (cod_2 (comp_2 some_kind_of_f some_kind_of_g)) := composed.snd.snd
+
 
     have at_fgh
     : comp f (comp g h)
@@ -645,13 +768,63 @@ def coassoc_dir_statement {C : Comonoid}
      exact congrFun coassoc_onDir ⟨ f' , g' , h ⟩
 
 
-    -- have smaller_intermediate :
-    --   (⟨C.comult.onDir (posAtDir i) ⟨some_kind_of_f, some_kind_of_g⟩, some_kind_of_h⟩ : (C.carrier◁C.carrier).dir (C.comult.onPos i))
-    --   =
-    --   (⟨dir_eq ▸ C.comult.onDir i ⟨dir_eq ▸ f, g⟩, (coassoc_pos_statement f g) ▸ h⟩ : (C.carrier◁C.carrier).dir (C.comult.onPos i))
-    --   := by
-    --   sorry
+    let capstmt : C.carrier.dir (cod (comp f g)) := (coassoc_pos_statement f g).symm ▸ h
 
+    have ultimate :
+      (⟨C.comult.onDir (posAtDir i) ⟨some_kind_of_f, some_kind_of_g⟩, some_kind_of_h⟩ : (C.carrier ◁ C.carrier).dir (C.comult.onPos i))
+      =
+      (⟨dir_eq ▸ C.comult.onDir i ⟨dir_eq ▸ f, g⟩, capstmt⟩ : (C.carrier ◁ C.carrier).dir (C.comult.onPos i))
+      := by
+
+      have cod_eq : cod (i := i) f = cod (i := posAtDir i) (dir_eq (i := i) ▸ f)
+        := (cod_eq (i := i) (i' := posAtDir i) (h := (bookkeeping i).symm) (x := dir_eq) f cod).symm
+
+      have H0 : dir_eq ▸ C.comult.onDir i ⟨dir_eq ▸ f, g⟩ = C.comult.onDir (posAtDir i) ⟨ dir_eq ▸ dir_eq ▸ f , ((cod_eq ▸ g) :  C.carrier.dir (cod (i := posAtDir i) (dir_eq ▸ f)))  ⟩ :=
+        abstracted2 (α := C.carrier.pos)
+                    (β := C.carrier.dir)
+                    (i := i)
+                    (posAt := λ i ↦ posAtDir (C := C) i)
+                    (cod := λ {i} b ↦ cod (C := C) (i := i) b)
+                    (fn := λ i f gw ↦ C.comult.onDir i ⟨ (dir_eq ▸ f) , gw ⟩)
+                    (h := (bookkeeping i).symm)
+                    (x := dir_eq)
+                    (f := f)
+                    (g := g)
+                    cod_eq
+
+
+      have cap_eq : HEq capstmt h := by
+        let w := cast_heq ((coassoc_pos_statement f g).symm) h
+        exact w
+
+      have H : C.comult.onDir (posAtDir i) ⟨some_kind_of_f, some_kind_of_g⟩ = dir_eq ▸ C.comult.onDir i ⟨dir_eq ▸ f, g⟩ := by
+        rw [H0]
+        congr!
+        . exact casted_sigma_fst_eq_s (p1 := ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩)
+                                      (p2 := ⟨posAtDir (posAtDir i), λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩⟩)
+                                      (pos_eq := pos_eq)
+                                      (f := dir_eq ▸ f)
+                                      (x := dir_eq)
+        . unfold some_kind_of_g composed g'
+          have x := casted_sigma_snd_eq_s (p1 := ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩)
+                                          (p2 := ⟨posAtDir (posAtDir i), λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩⟩)
+                                          (pos_eq := pos_eq)
+                                          (f := dir_eq ▸ f)
+                                          (g := dir_eq ▸ g)
+                                          (h := h)
+          simp_all only [heq_eqRec_iff_heq, f']
+      congr!
+      . unfold some_kind_of_f some_kind_of_g composed
+        simp_all only [some_kind_of_f, composed, f', g', some_kind_of_g, some_kind_of_h]
+        have x := casted_sigma_3rd_eq_s (p1 := ⟨posAtDir i, λ pd ↦ C.comult.onPos (cod_2 pd)⟩)
+                                          (p2 := ⟨posAtDir (posAtDir i), λ pd ↦ ⟨ (C.comult.onPos (posAtDir i)).snd pd , λ qd ↦ cod_2 ((comp_2 pd qd)) ⟩⟩)
+                                          (pos_eq := pos_eq)
+                                          (f := dir_eq ▸ f)
+                                          (g := dir_eq ▸ g)
+                                          (h := h)
+                                          (capstmt := capstmt)
+                                          (more := cap_eq)
+        simp_all only [some_kind_of_f, f', some_kind_of_g, g', composed, some_kind_of_h, x]
 
     have intermediate :
       comp_2
@@ -661,27 +834,27 @@ def coassoc_dir_statement {C : Comonoid}
         some_kind_of_h
       =
       comp (comp f g) (coassoc_pos_statement f g ▸ h) := by
-      simp_all [comp_2, comp, posAtDir]
-      simp_all only [some_kind_of_f, composed, f', g', some_kind_of_g, some_kind_of_h]
+      unfold comp_2
+      simp [ultimate]
       congr!
-      . sorry
-      . sorry
+    rw [at_fgh, ← intermediate]
 
-    rw [← intermediate, at_fgh]
 
 def Hom_cat : {C : Comonoid} → (i j : C.carrier.pos) → Type :=
   λ {C} i j ↦ { f : C.carrier.dir i // cod f = j }
 
 def id_cat : {C : Comonoid} → (i : C.carrier.pos) → { f : C.carrier.dir i // cod f = i } :=
   λ {C} i ↦
-  ⟨ C.counit.onDir i () , by
+  ⟨ C.counit.onDir i () ,
+  by
+
     unfold cod
+
+
     have H : (composemap C.comult (subst.whiskerRight C.counit)).onPos i
               =
              (subst.leftUnitor.inv C.carrier).onPos i := by
              rw [C.leftCounit]
-    unfold composemap at H
-    simp at H
     have M : (C.comult.onPos i).snd (C.counit.onDir (C.comult.onPos i).fst ())
               =
               i := congrFun (snd_eq H) ()
@@ -692,7 +865,8 @@ def id_cat : {C : Comonoid} → (i : C.carrier.pos) → { f : C.carrier.dir i //
     conv at M =>
       lhs
       rewrite [K]
-    exact M ⟩
+    exact M
+    ⟩
 
 def comp_cat : {C : Comonoid} →
                {i j k : C.carrier.pos} →
@@ -700,11 +874,8 @@ def comp_cat : {C : Comonoid} →
                { codlessg : C.carrier.dir j // cod codlessg = k } →
                { f : C.carrier.dir i // cod f = k } :=
   λ ⟨f, codf⟩ ⟨g, codg⟩ ↦ ⟨ comp f (codf ▸ g) , by
-    rw [← codg]
-    rw [(coassoc_pos_statement f (codf ▸ g))]
-
-    subst codf
-    rfl
+    subst codf codg
+    rw [coassoc_pos_statement f g]
   ⟩
 
 def dependentCongrArg {α out : Type}
@@ -725,35 +896,19 @@ def assoc_cat : {C : Comonoid} →
                 (h : { codlessh : C.carrier.dir k // cod codlessh = l }) →
                 comp_cat (comp_cat f g) h = comp_cat f (comp_cat g h) :=
     λ {C} {i j k l} ⟨f, codf⟩ ⟨g, codg⟩ ⟨h, codh⟩ ↦ by
-    have k' : { fg : C.carrier.dir i // cod fg = k } := comp_cat ⟨f, codf⟩ ⟨g, codg⟩
-    unfold comp_cat
-    simp_all
-
-    have ah : comp f (codf.symm ▸ g) = (comp_cat ⟨f, codf⟩ ⟨g, codg⟩).val := by
-      rename_i x x_1 x_2
-      subst codh codg codf
-      simp_all only
-      obtain ⟨val, property⟩ := x
-      obtain ⟨val_1, property_1⟩ := x_1
-      obtain ⟨val_2, property_2⟩ := k'
-      obtain ⟨val_3, property_3⟩ := x_2
-      rfl
-
     have codg_eq_codg' : cod g = cod (codf ▸ g) := by
       exact dependentCongrArg g codf cod
-    have dir_statement := coassoc_dir_statement (i := i) (j := j) (k := k) (l := l) f (codf ▸ g) (codg_eq_codg' ▸ codg ▸ h)
-    rename_i x x_1 x_2
+    have dir_statement := coassoc_dir_statement (i := i) f (codf ▸ g) (codg_eq_codg' ▸ codg ▸ h)
     subst codh codg codf
-
-    simp_all only
+    simp_all only [comp_cat]
 
   /-- The theorem: every comonoid in Poly induces a (small) category. -/
 instance comonoid_to_category (C : Comonoid) : Category C.carrier.pos where
   Hom := Hom_cat
   id := id_cat
   comp := comp_cat
-  id_comp := by sorry -- { intros, ext, simp [composemap, polyid, C.leftCounit] },
-  comp_id := by sorry -- { intros, ext, simp [composemap, polyid, C.rightCounit] },
+  id_comp := by sorry
+  comp_id := by sorry
   assoc   := assoc_cat
 
 
