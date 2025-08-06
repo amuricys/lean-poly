@@ -19,7 +19,8 @@ structure Comonoid where
                 =
                 subst.leftUnitor.inv carrier
   rightCounit : composemap comult (subst.whiskerLeft counit)
-                = subst.rightUnitor.inv carrier
+                =
+                subst.rightUnitor.inv carrier
   coassoc     : (composemap comult (subst.whiskerLeft comult)) -- : c ⟶ c ◁ (c ◁ c)
                 =
                 composemap (composemap comult (subst.whiskerRight comult)) -- : c ⟶ (c ◁ c) ◁ c
@@ -129,21 +130,45 @@ def on_dir_eq {f : polymap p (p ◁ p ◁ p)} {g : polymap p ((p ◁ p) ◁ p)}
   cases x
   rfl
 
-def on_dir_eq_no_cast {f : polymap p (p ◁ p ◁ p)} {g : polymap p ((p ◁ p) ◁ p)}
+def on_pos_eq_id {f g : polymap p (y ◁ p)}
+                 {i : p.pos}
+                 (x : f = g)
+                 : (f.onPos i).snd () = (g.onPos i).snd () := by
+                 have H := congrFun (congrArg (λ x ↦ x.onPos) x) i
+                 subst x
+                 simp_all only
+
+def on_dir_eq_id {f : polymap p (y ◁ p)} {g : polymap p (y ◁ p)}
   {i : p.pos}
-  (x : f = composemap g subst.associator.hom)
+  (x : f = g)
+
+  (pos_eq : (f.onPos i).snd () = (g.onPos i).snd ())
   :
-  (fun (df : (p ◁ p ◁ p).dir (f.onPos i)) =>
-  (f.onDir i df : p.dir i))
+  (fun (d : (y ◁ p).dir (f.onPos i))  => f.onDir i d)
   =
-  (fun (df : (p ◁ p ◁ p).dir (f.onPos i)) =>
-  let dg : (p ◁ p ◁ p).dir (subst.associator.hom.onPos $ g.onPos i) := by
-    rewrite [x] at df
-    exact df
-  (g.onDir i (subst.associator.hom.onDir _ dg) : p.dir i))
+  (fun (d : (y ◁ p).dir (f.onPos i)) => g.onDir i ⟨ () , pos_eq ▸ d.snd  ⟩  )
   := by
-  subst x
-  simp_all only [eq_mp_eq_cast, cast_eq]
+  cases x
+  rfl
+
+def on_pos_eq_id_ {f g : polymap p (p ◁ y)}
+                 {i : p.pos}
+                 (x : f = g)
+                 : (f.onPos i).fst = (g.onPos i).fst := by
+                 have H := congrFun (congrArg (λ x ↦ x.onPos) x) i
+                 subst x
+                 simp_all only
+
+def on_dir_eq_id_ {f : polymap p (p ◁ y)} {g : polymap p (p ◁ y)}
+  {i : p.pos}
+  (x : f = g)
+  (pos_eq : (f.onPos i).fst = (g.onPos i).fst )
+  :
+  (fun (d : (p ◁ y).dir (f.onPos i))  => f.onDir i d)
+  =
+  (fun (d : (p ◁ y).dir (f.onPos i)) => g.onDir i ⟨ pos_eq ▸ d.fst  , ()  ⟩  )
+  := by
+  cases x
   rfl
 
 
@@ -569,6 +594,28 @@ def comp_2 {C : Comonoid}
          C.carrier.dir i :=
          C.comult.onDir i ⟨ f , g ⟩
 
+def id {C : Comonoid} (i : C.carrier.pos) : C.carrier.dir i :=
+    C.counit.onDir i ()
+
+lemma cod_id {C : Comonoid} {i : C.carrier.pos} : cod (id (i := i)) = i :=
+  by
+    unfold cod
+    have H : (composemap C.comult (subst.whiskerRight C.counit)).onPos i
+              =
+             (subst.leftUnitor.inv C.carrier).onPos i := by
+             rw [C.leftCounit]
+    have M : (C.comult.onPos i).snd (C.counit.onDir (C.comult.onPos i).fst ())
+              =
+              i := congrFun (snd_eq H) ()
+    have K : C.counit.onDir (C.comult.onPos i).fst ()
+             =
+             dir_eq ▸
+             C.counit.onDir i () := npodese (C.comult.onPos i).fst i (bookkeeping i) dir_eq.symm (fun x => C.counit.onDir x ())
+    conv at M =>
+      lhs
+      rewrite [K]
+    exact M
+
 lemma across_cods {C : Comonoid}
                   {i : C.carrier.pos}
                   {f : C.carrier.dir i}
@@ -756,6 +803,8 @@ def coassoc_dir_statement {C : Comonoid}
     let some_kind_of_h : C.carrier.dir (cod_2 (comp_2 some_kind_of_f some_kind_of_g)) := composed.snd.snd
 
 
+
+
     have at_fgh
     : comp f (comp g h)
       =
@@ -844,29 +893,7 @@ def Hom_cat : {C : Comonoid} → (i j : C.carrier.pos) → Type :=
   λ {C} i j ↦ { f : C.carrier.dir i // cod f = j }
 
 def id_cat : {C : Comonoid} → (i : C.carrier.pos) → { f : C.carrier.dir i // cod f = i } :=
-  λ {C} i ↦
-  ⟨ C.counit.onDir i () ,
-  by
-
-    unfold cod
-
-
-    have H : (composemap C.comult (subst.whiskerRight C.counit)).onPos i
-              =
-             (subst.leftUnitor.inv C.carrier).onPos i := by
-             rw [C.leftCounit]
-    have M : (C.comult.onPos i).snd (C.counit.onDir (C.comult.onPos i).fst ())
-              =
-              i := congrFun (snd_eq H) ()
-    have K : C.counit.onDir (C.comult.onPos i).fst ()
-             =
-             dir_eq ▸
-             C.counit.onDir i () := npodese (C.comult.onPos i).fst i (bookkeeping i) dir_eq.symm (fun x => C.counit.onDir x ())
-    conv at M =>
-      lhs
-      rewrite [K]
-    exact M
-    ⟩
+  λ i ↦ ⟨ id i, cod_id ⟩
 
 def comp_cat : {C : Comonoid} →
                {i j k : C.carrier.pos} →
@@ -902,13 +929,145 @@ def assoc_cat : {C : Comonoid} →
     subst codh codg codf
     simp_all only [comp_cat]
 
+def counit_onPos_unit {C : Comonoid}
+                      {i : C.carrier.pos}
+                      :
+                      C.counit.onPos i = () :=
+  by
+  rfl
+
+-- C.counit.onDir (C.comult.onPos i).fst () = dir_eq ▸ C.counit.onDir i ()
+lemma abstracted_lol {α : Sort _}
+                     {β : α → Sort _}
+                     {i i' : α}
+                     (h : i' = i )
+                     (x : β i = β i')
+                     (f : (i : α) → β i)
+                     :
+                     f i' = x ▸ f i := by
+                     cases h
+                     rfl
+
+
+
+def id_comp_cat_dir_statement {C : Comonoid}
+                              {i : C.carrier.pos}
+                              (f : C.carrier.dir i)
+                              :
+                              comp (id i) (cod_id ▸ f) = f :=
+  by
+  unfold comp cod
+  have H : (composemap C.comult (subst.whiskerRight C.counit) : polymap C.carrier  (y ◁ C.carrier))
+            =
+           (subst.leftUnitor.inv C.carrier : polymap C.carrier  (y ◁ C.carrier)) := by
+           rw [C.leftCounit]
+
+
+
+  simp_all [composemap, subst.whiskerRight]
+
+
+  have pos_eq
+    : (cod_2 (C.counit.onDir (posAtDir i) ()))
+      =
+      (i : C.carrier.pos)
+    := on_pos_eq_id (i := i)
+                    (x := H)
+
+
+  have id_comp_onDir := on_dir_eq_id (i := i)
+                                     C.leftCounit
+                                     pos_eq
+
+  simp_all [composemap,  subst.whiskerRight, Function.comp_apply, applyMap, subst.leftUnitor.inv]
+
+
+  have well :
+   C.comult.onDir i ⟨id (posAtDir i), (pos_eq.symm ▸ f : C.carrier.dir (cod_2 (C.counit.onDir (posAtDir i) ())))⟩
+   =
+   (pos_eq ▸ pos_eq.symm ▸ f : C.carrier.dir i)
+  := congrFun id_comp_onDir ⟨ () , (pos_eq.symm ▸ f : C.carrier.dir (cod_2 (C.counit.onDir (posAtDir i) ())))  ⟩
+
+  have rhs_rw : (pos_eq ▸ pos_eq.symm ▸ f : C.carrier.dir i) = f := cast_id'''''' pos_eq.symm
+
+  have lhs_rw_1 : id (posAtDir i) = dir_eq ▸ id i := abstracted_lol (bookkeeping i)
+                                                                    dir_eq
+                                                                    (λ i ↦ C.counit.onDir i ())
+
+
+  rw [rhs_rw] at well
+
+  rw [← well]
+  congr!
+  . exact lhs_rw_1.symm
+
+
+def comp_id_cat_dir_statement {C : Comonoid}
+                          {i : C.carrier.pos}
+                          (f : C.carrier.dir i)
+                          :
+                          comp f (id (cod f)) = f :=
+  by
+  unfold comp cod
+  have H : (composemap C.comult (subst.whiskerLeft C.counit))
+            =
+           (subst.rightUnitor.inv C.carrier) := by
+           rw [C.rightCounit]
+
+
+
+  simp_all [composemap, subst.whiskerRight]
+
+  have id_comp_onDir := on_dir_eq_id_ (i := i)
+                                      C.rightCounit
+                                      (bookkeeping i)
+
+  reduce at id_comp_onDir
+
+  have well
+    : comp f (id (cod_2 (dir_eq ▸ f)))
+      =
+      (bookkeeping i ▸ dir_eq ▸ f : C.carrier.dir i)
+   := congrFun id_comp_onDir ⟨ dir_eq ▸ f , () ⟩
+
+  have x : (bookkeeping i ▸ dir_eq ▸ f : C.carrier.dir i) = f := cast_id''''' (h := (bookkeeping i).symm) (x := dir_eq)
+
+  rw [x] at well
+  conv =>
+    rhs
+    rw [← well]
+  congr!
+
+
+def id_comp_cat : {C : Comonoid} →
+                {i j : C.carrier.pos} →
+                (f : { codlessf : C.carrier.dir i // cod codlessf = j }) →
+                comp_cat (id_cat i) f = f :=
+    λ {C} {i j} ⟨f, codf⟩ ↦ by
+      have stmt := id_comp_cat_dir_statement (i := i) f
+      subst codf
+      ext : 1
+      simp_all only
+      exact stmt
+
+def comp_id_cat : {C : Comonoid} →
+                {i j : C.carrier.pos} →
+                (f : { codlessf : C.carrier.dir i // cod codlessf = j }) →
+                comp_cat f (id_cat j) = f :=
+    λ {C} {i j} ⟨f, codf⟩ ↦ by
+      have stmt := comp_id_cat_dir_statement (i := i) f
+      subst codf
+      ext : 1
+      simp_all only
+      exact stmt
+
   /-- The theorem: every comonoid in Poly induces a (small) category. -/
 instance comonoid_to_category (C : Comonoid) : Category C.carrier.pos where
   Hom := Hom_cat
   id := id_cat
   comp := comp_cat
-  id_comp := by sorry
-  comp_id := by sorry
+  id_comp := id_comp_cat
+  comp_id := comp_id_cat
   assoc   := assoc_cat
 
 

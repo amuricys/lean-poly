@@ -90,6 +90,24 @@ lemma cast_id'''' {α : Type}
   cases h
   rfl
 
+lemma cast_id''''' {α : Type}
+                   {β : α → Type}
+                   {a b : α}
+                   {c : β a}
+                   (h : a = b)
+                   (x : β a = β b) : h ▸ x ▸ c = c := by
+                   cases h
+                   rfl
+
+lemma cast_id'''''' {α : Type}
+                    {β : α → Type}
+                    {a b : α}
+                    {c : β a}
+                    (h : a = b)
+                    : h ▸ h.symm ▸ c = c := by
+                    cases h
+                    rfl
+
 lemma cast_sigma_fst {α : Type} {β : α → Type} {a1 a2 : α}
                         {b1 : β a1} {b2 : β a2} (h : a1 = a2)
                         (e : Sigma.mk a1 b1 = Sigma.mk a2 b2) :
