@@ -20,13 +20,19 @@
       in {
         packages = {
           poly-lean = poly-lean.sharedLib;
+
         };
+        defaultPackage = poly-lean.sharedLib;
         devShells.default = pkgs.mkShell {
           buildInputs = [
             pkgs.lean.lean-all
             pkgs.python3
             pkgs.python3Packages.pip
           ];
+          shellHook = pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+            # Add LeanCopilot's ctranslate2 library to the dynamic library path
+            export DYLD_LIBRARY_PATH="$PWD/.lake/packages/LeanCopilot/.lake/build/lib:''${DYLD_LIBRARY_PATH:-}"
+          '';
         };
       });
 }
